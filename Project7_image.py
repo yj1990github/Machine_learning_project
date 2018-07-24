@@ -3,7 +3,7 @@
 """
 Created on Mon Jul 16 14:41:16 2018
 
-@author: fh
+@author: Jian YU
 
 project 7
 
@@ -59,6 +59,7 @@ from skimage.morphology import disk
 from skimage import exposure
 
 #%% load data
+print('Check dataset information: \n')
 fileName = "Dataset30HV.hdf5"
 f = h5py.File(fileName,  "r")
 for item in f.attrs.keys():
@@ -72,6 +73,7 @@ H= np.array(f['/entry/H'])     #30*100*100
 PP= np.array(f['/entry/PP'])   #30 200 150
 M1= np.array(f['/entry/M1'])    #(30, 400, 250)
 M2= np.array(f['/entry/M2'])    #(30, 450, 200)
+print('Check data shape:')
 print(Xt.shape,Xlt.shape,Xl.shape,H.shape, PP.shape,M1.shape,M2.shape)
 f.close()
 
@@ -112,7 +114,8 @@ threshold2=[0.48, 0.29, 0.26, 0.43, 0.33, 0.08, 0.32, 0.47, 0.44, 0.44,\
 #for i in range(30):
 #for i in range(9): #I manually find out the   
 for i in [9]:
-    print('Current number of image: '+repr(i))
+    print('Current image number: '+repr(i))
+    print('Orignial image:')
     temp=denoise_tv_chambolle(Xt[i], weight=0.1, multichannel=True)
 #    plt.hist(Xt[i].ravel())
 #    plt.show()
@@ -128,6 +131,7 @@ for i in [9]:
 #    temp2 = exposure.equalize_hist(Xt[i])
     plt.imshow(temp2)
     plt.show()
+    
 #    plt.hist(temp2.ravel())
 #    plt.show()
 #    thresh_min=skimage.filters.threshold_minimum(temp2)
@@ -172,7 +176,7 @@ for i in [9]:
         # https://stackoverflow.com/questions/28910718/give-3-points-and-a-plot-circle
         return circle
     
-    def p_axis(img):
+    def p_axis(img): # find principal axis
         y0, x0 = np.nonzero(img)
         x = x0 - np.mean(x0)
         y = y0 - np.mean(y0)
@@ -200,6 +204,7 @@ for i in [9]:
     
     #%%
 #    study the shape of bone and skin
+    print('A binary image after thresholding to reveal the shape of the foot:')
     thresh_min=threshold1[i]
     temp3=temp2>thresh_min
     plt.imshow(temp3)
@@ -207,7 +212,7 @@ for i in [9]:
     
 
    
-    
+    print('Show the edge, contour and the centriod of the foot:')
     i_canny=canny(temp2)
     plt.imshow(i_canny)
 #    plt.show()
@@ -230,6 +235,9 @@ for i in [9]:
     plt.plot(centroid[1],centroid[0],'ro')
     plt.show()
     
+    
+    print('The diagram of distance between the contour and the centroid:')
+    print('(find local maxima and minima to get reference points)')
     D2_temp=contours[con_max]-np.transpose(np.array(centroid))#L2 Distance contour to centroid
     D2_temmp2=np.sum(D2_temp**2,axis=1)
     plt.plot(contours[con_max][:, 1],D2_temmp2)
@@ -266,8 +274,9 @@ for i in [9]:
     
     
 
-    
-    plt.show()
+    print('display reference points and choose first three points to show hallux')
+    print('(for three poinst, generating a circle can occupy the largest area)')
+#    plt.show()
     fig,ax = plt.subplots(1)
     ax.set_aspect('equal')
     ax.imshow(Xt[i])
@@ -293,6 +302,7 @@ for i in [9]:
     
     #%% 
     # find principal axis
+    print('show the image enclosed in the circle')
     temp6=temp2.copy()
     for m in range(temp6.shape[0]):
         for n in range(temp6.shape[1]):
@@ -300,6 +310,8 @@ for i in [9]:
                  temp6[m,n]=0
     plt.imshow(temp6)
     plt.show()
+    
+    print('Use threshold to show the shape of the bone and calculate its principal axis')
 #    temp6[temp6>filters.threshold_minimum(temp2)]=1
     temp6[temp6>threshold2[i]]=1
     temp6[temp6<=threshold2[i]]=0
@@ -333,6 +345,8 @@ for i in [9]:
 ##    plt.gca().invert_yaxis()  # Match the image system with origin at top left
     plt.show()  
     
+    print('since we have the principal axis, we can find a bigger area to display the bone')
+    print('to prevent the case that the bone is located out of the area')
 #   #right line1: y-p2_c[1]= (vectors_1[2]/vectors_1[0])*(x-p2_c[0])
 #   #left  line1: y-p0_c[1]= (vectors_1[2]/vectors_1[0])*(x-p0_c[0])
 #   #up    line1: y-p1_c[1]= (vectors_1[3]/vectors_1[1])*(x-p1_c[0])
@@ -367,6 +381,8 @@ for i in [9]:
 #    plt.plot([leftbottom1[0],p0_c[0]-int(p0_c[1]*x_v1/y_v1)],[leftbottom1[1],0])
     plt.show()
     
+    print('show the bone in the box and plot those corners')
+    
     for m in range(temp7.shape[0]):
       for n in range(temp7.shape[1]):
          if m-p2_c[1]>= (vectors_1[2]/vectors_1[0])*(n-p2_c[0]):temp7[m,n]=0 #right
@@ -382,6 +398,7 @@ for i in [9]:
     #%%
     #obtain tensity distribution and joints
     #hallux
+    print('compute the summation of pixel intensity along the longitudinal axis for finding joints')
     num_layers=int(((rightbottom1[0]-rightup1[0])**2+(rightbottom1[1]-rightup1[1])**2)**0.5)
     num_per=int(((rightbottom1[0]-leftbottom1[0])**2+(rightbottom1[1]-leftbottom1[1])**2)**0.5)
     
@@ -406,12 +423,19 @@ for i in [9]:
         for num2 in range(len(x_temp)):
             temp+=temp7[int(y_temp[num2]),int(x_temp[num2])]
         y_prime.append(temp)
-    print(len(y_prime))
+#    print(len(y_prime))
     plt.plot([i for i in range(len(y_prime))],y_prime)
     plt.show()
+    print('find the derivative')
+    print('(for the position with highest value or lowest value is the joint position)')
+
     plt.plot([i for i in range(len(y_prime)-1)],\
               (np.array(y_prime[:-1])-np.array(y_prime[1:]).tolist()))#find derivative
     plt.show()
+    
+    print('print the joint on thresholded image')
+
+
     max_deriv=np.argmax(np.array(y_prime[:-1])-np.array(y_prime[1:]))
     joint_first0=[x_axis[max_deriv],\
                  y_axis[max_deriv]]
@@ -425,6 +449,9 @@ for i in [9]:
 
     plt.plot(x_axis,y_axis)
     plt.show()
+    
+    print('truncate the area below the joint, then we can get the hallux and find the contour')
+    
 
     for m in range(temp7.shape[0]):
       for n in range(temp7.shape[1]):
@@ -443,11 +470,18 @@ for i in [9]:
     #fill in the contour
     x_array=np.array(contours7[con_max7][:, 1]).astype('int')
     y_array=np.array(contours7[con_max7][:, 0]).astype('int')
-    
+    plt.imshow(temp7)
+    plt.show()
 
 #%%
 # try horitonzal swweep
+    print('create a new empty figure and plot the contour')
     temp8=np.zeros_like(temp2)
+    plt.plot(contours7[con_max7][:, 1],contours7[con_max7][:, 0])
+    plt.imshow(temp8)
+    plt.show()
+    
+    print('fill the contour with horizontal sweep(not perfect, but good enough)')
     y_max0=y_array[np.argmax(y_array)]
     y_min0=y_array[np.argmin(y_array)]
     for yy in range(y_max0-y_min0+1):
@@ -462,11 +496,12 @@ for i in [9]:
             x_min1=temp[np.argmin(temp)]
             x_max1=temp[np.argmax(temp)]
             temp8[y_min0+yy,x_min1[0]:x_max1[0]+1]=1
-            print('good:   '+repr(x_min1)+ ' '+repr(x_max1))
-            plt.imshow(temp8)
-            plt.show()            
+#            print('good:   '+repr(x_min1)+ ' '+repr(x_max1))
+#            plt.imshow(temp8)
+#            plt.show()            
 #        except: 
 #            pass
+    plt.plot(contours7[con_max7][:, 1],contours7[con_max7][:, 0])
     plt.imshow(temp8)
     plt.show()
             
@@ -531,35 +566,35 @@ for i in [9]:
 #    plt.imshow(temp8)
 #    plt.show()
     
-  #%%
-#study the shape of bone  
-    temp5=temp2>threshold2[i]
-    plt.imshow(temp5)
-#    intensity_a=[i for i in range(800)]   # results are not good
-#    intensity_b=(800-np.sum(temp4,axis=0)).tolist()
-#    plt.plot(intensity_a, intensity_b)
-    
-    contours_5 = measure.find_contours(temp5, 0.8)
-    con_length_5=[i.shape[0] for i in contours_5]
-    con_max_5=np.argmax(con_length_5)
-#    for n, contour in enumerate(contours):
-#        plt.plot(contour[:, 1], contour[:, 0], linewidth=2)
-#    plt.plot(contours_5[con_max_5][:, 1], contours_5[con_max_5][:, 0], linewidth=2)
-#    plt.show()
-    
-    D2_temp3=contours_5[con_max_5]-np.transpose(np.array(centroid))#L2 Distance contour to centroid
-    D2_temp4=np.sum(D2_temp3**2,axis=1)
-#    plt.plot(contours_5[con_max_5][:, 1],D2_temp4)
-
-#    temp3=temp2>threshold_otsu(temp2)-0.35
-#    block_size = 35
-#    local_thresh = threshold_local(temp2, block_size, offset=-0.4)
-#    temp3=temp2>local_thresh
-    
-#    selem = disk(15)
-#    local_otsu = rank.otsu(temp2, selem)
-#    temp3=temp2>local_otsu
-#    plt.show()
+#  #%%
+##study the shape of bone  
+#    temp5=temp2>threshold2[i]
+#    plt.imshow(temp5)
+##    intensity_a=[i for i in range(800)]   # results are not good
+##    intensity_b=(800-np.sum(temp4,axis=0)).tolist()
+##    plt.plot(intensity_a, intensity_b)
+#    
+#    contours_5 = measure.find_contours(temp5, 0.8)
+#    con_length_5=[i.shape[0] for i in contours_5]
+#    con_max_5=np.argmax(con_length_5)
+##    for n, contour in enumerate(contours):
+##        plt.plot(contour[:, 1], contour[:, 0], linewidth=2)
+##    plt.plot(contours_5[con_max_5][:, 1], contours_5[con_max_5][:, 0], linewidth=2)
+##    plt.show()
+#    
+#    D2_temp3=contours_5[con_max_5]-np.transpose(np.array(centroid))#L2 Distance contour to centroid
+#    D2_temp4=np.sum(D2_temp3**2,axis=1)
+##    plt.plot(contours_5[con_max_5][:, 1],D2_temp4)
+#
+##    temp3=temp2>threshold_otsu(temp2)-0.35
+##    block_size = 35
+##    local_thresh = threshold_local(temp2, block_size, offset=-0.4)
+##    temp3=temp2>local_thresh
+#    
+##    selem = disk(15)
+##    local_otsu = rank.otsu(temp2, selem)
+##    temp3=temp2>local_otsu
+##    plt.show()
 
 
     
